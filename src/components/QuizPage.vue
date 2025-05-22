@@ -43,16 +43,14 @@
             <!-- Show question text -->
             <p class="font-weight-medium">{{ i+1 }}. {{ decode(q.question) }}</p>
 
-            <!-- Show answer options as radio buttons -->
+            <!-- Show answer options as checkboxes for multi-choice -->
             <div v-for="opt in q.all_answers" :key="opt" class="form-check">
               <input
                 class="form-check-input"
-                type="radio"
-                :name="'q'+i"
+                type="checkbox"
                 :id="'q'+i+opt"
                 :value="opt"
                 v-model="answers[i]"
-                required
                 @change="updateProgress"
               />
               <label class="form-check-label" :for="'q'+i+opt">
@@ -98,7 +96,7 @@ export default {
   data() {
     return {
       questions: [],     // quiz questions
-      answers: [],       // user's selected answers
+      answers: [],       // array of arrays for multi-choice answers
       loading: true,     // loading status
       error: false,      // error status
       answeredCount: 0   // how many questions are answered
@@ -113,7 +111,8 @@ export default {
           ...q,
           all_answers: shuffle([q.correct_answer, ...q.incorrect_answers])
         }))
-        this.answers = Array(this.questions.length).fill(null)
+        // Initialize each answer as an empty array
+        this.answers = this.questions.map(() => [])
       })
       .catch(() => { this.error = true })  // handle error
       .finally(() => { this.loading = false })  // finish loading
@@ -121,14 +120,16 @@ export default {
   methods: {
     decode: htmlDecode,  // decode text for display
     updateProgress() {
-      // Count how many answers are selected
-      this.answeredCount = this.answers.filter(a => a !== null).length
+      // Count how many questions have at least one checkbox selected
+      this.answeredCount = this.answers.filter(arr => arr.length > 0).length
     },
     submitQuiz() {
-      // Check correct answers and calculate score
+      // Calculate score: +1 for each question where correct answer is selected
       let score = 0
       this.questions.forEach((q, i) => {
-        if (this.answers[i] === q.correct_answer) score++
+        if (this.answers[i].includes(q.correct_answer)) {
+          score++
+        }
       })
       // Navigate to results page with score
       this.$router.push({ name: 'Results', query: { score } })
